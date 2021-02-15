@@ -2,26 +2,9 @@
 
 You can view and explorer the [Mandelbrot Set](https://en.wikipedia.org/wiki/Mandelbrot_set) with this browser-based app.
 
-# Install and Usage
+# Usage
 
-Prerequist: Node.js.
-
-First clone or download this repository as a zip file into a directory,
-and cd into it. Then:
-
-`npm install`
-
-Then:
-
-`npm start`
-
-This will start the application at `http://localhost:8080` <- navigate
-to this URL in your browser, and you shall see:
-
-![Mandelbrot Set](./mandelbrot-set.png).
-
-Once you are here, you can zoom in by clicking and then dragging
-within the plot to form a rectangle.
+Just open `index.html` in a modern browser.
 
 ## Some Scenes to Find
 
