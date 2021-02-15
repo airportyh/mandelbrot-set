@@ -27,6 +27,15 @@ within the plot to form a rectangle.
 
 ![Scenes](scenery.png).
 
+## Todo
+
+* keep aspect ratio always
+* implement zooming gesture
+* print high-res images with printer
+* streamline calculations (done)
+* double resolution for retina display (done)
+* use low level canvas image data API to improve performance (done)
+
 ## Videos
 
 * You may [watch me explain the Mandelbrot Set and walk through the code](https://www.youtube.com/watch?v=9cZovkFQmf4)
