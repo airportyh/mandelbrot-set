@@ -12,12 +12,16 @@ Just open `index.html` in a modern browser.
 
 ## Todo
 
-* keep aspect ratio always
-* implement zooming gesture
+* mixed of fast render and detailed rendering
 * print high-res images with printer
+* Julia sets
+* bug with gap on top (done)
 * streamline calculations (done)
 * double resolution for retina display (done)
 * use low level canvas image data API to improve performance (done)
+* panning (done)
+* keep aspect ratio always (done)
+* implement zooming gesture (done)
 
 ## Videos
 

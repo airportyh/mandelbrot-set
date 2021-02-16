@@ -14,22 +14,26 @@ function inSet(cr, ci) {
     return i;
 }
 
-let screenWidth = window.innerWidth * 2;
-let screenHeight = window.innerHeight * 2;
+let screenWidth = 0;
+let screenHeight = 0;
 const WORLD_VIEW_TOP_LEFT = [-2, 2];
 const WORLD_VIEW_BOTTOM_RIGHT = [2, -2];
-const MAX_ITERATIONS = 500;
+const MAX_ITERATIONS = 100;
 const LN_MAX_ITERATIONS = Math.log(MAX_ITERATIONS);
+const canvasScaleFactor = 1;
+let worldViewOriginX = 0;
+let worldViewOriginY = 0;
+let worldViewScaleFactor;
 
-function screenToWorld(x) {
+function screenToWorld2(x) {
     const topLeft = worldView[0];
     const bottomRight = worldView[1];
     return [
-        x[0] * 2 * (
+        x[0] * canvasScaleFactor * (
             (bottomRight[0] - topLeft[0]) /
             screenWidth
         ) + topLeft[0],
-        (x[1] * 2 * (
+        (x[1] * canvasScaleFactor * (
             (bottomRight[1] - topLeft[1]) /
             screenHeight
         ) + topLeft[1])
@@ -37,18 +41,15 @@ function screenToWorld(x) {
 }
 
 function drawMandelbrot(ctx, imageData) {
-    let start = new Date().getTime();
-    const topLeft = worldView[0];
-    const bottomRight = worldView[1];
-    
+    // let start = new Date().getTime();
+    let top = worldViewOriginY - (screenHeight * worldViewScaleFactor) / 2;
+    let left = worldViewOriginX - (screenWidth * worldViewScaleFactor) / 2;
+    // console.log("top", top, "left", left);
     const data = imageData.data;
     for (let i = 0; i < screenWidth; i++) {
         for (let j = 0; j < screenHeight; j++) {
-            const cr = i * (
-                (bottomRight[0] - topLeft[0]) /
-                screenWidth) + topLeft[0];
-            const ci = (j * ((bottomRight[1] - topLeft[1]) /
-                screenHeight) + topLeft[1]);
+            const cr = i * worldViewScaleFactor + left;
+            const ci = j * worldViewScaleFactor + top;
             
             const value = inSet(cr, ci);
             const index = (i + j * screenWidth) * 4;
@@ -62,62 +63,79 @@ function drawMandelbrot(ctx, imageData) {
         }
     }
     ctx.putImageData(imageData, 0, 0);
-    let end = new Date().getTime();
-    console.log("draw took", (end - start) + "ms");
+    // let end = new Date().getTime();
+    // console.log("draw took", (end - start) + "ms");
 }
-
-let worldView = [WORLD_VIEW_TOP_LEFT, WORLD_VIEW_BOTTOM_RIGHT];
 
 async function main() {
     const canvas = document.createElement("canvas");
-    const overlay = document.createElement("div");
-    overlay.style.position = "absolute";
-    overlay.style.backgroundColor = "rgba(0, 0, 255, 0.5)";
 
-    let mouseDown = false;
-    let pendingTopLeft;
+    let draggingFrom = null;
     canvas.addEventListener("mousedown", (event) => {
-        mouseDown = true;
-        const mouseCoords = [event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop];
-        pendingTopLeft = mouseCoords;
-        overlay.style.display = "block";
+        draggingFrom = [event.offsetX, event.offsetY]
     });
     canvas.addEventListener("mousemove", (event) => {
-        if (mouseDown) {
-            const mouseCoords = [event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop];
-    
-            overlay.style.left = (canvas.offsetLeft + pendingTopLeft[0]) + "px";
-            overlay.style.top = (canvas.offsetTop + pendingTopLeft[1]) + "px";
-            overlay.style.width = (mouseCoords[0] - pendingTopLeft[0]) + "px";
-            overlay.style.height = (mouseCoords[1] - pendingTopLeft[1]) + "px";
+        if (draggingFrom) {
+            worldViewOriginX += (draggingFrom[0] - event.offsetX) * worldViewScaleFactor;
+            worldViewOriginY += (draggingFrom[1] - event.offsetY) * worldViewScaleFactor;
+            requestAnimationFrame(render);
+            draggingFrom = [event.offsetX, event.offsetY];
         }
-    })
-    canvas.addEventListener("mouseup", async (event) => {
-        mouseDown = false;
-        const mouseCoords = [event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop];
-        const worldCoord = screenToWorld(mouseCoords);
-        overlay.style.display = "none";
-        worldView = [screenToWorld(pendingTopLeft), worldCoord];
-        context.fillStyle = "white";
-        context.fillRect(0, 0, screenWidth, screenHeight);
-        drawMandelbrot(context, imageData);
     });
-    canvas.width = screenWidth;
-    canvas.height = screenWidth;
-    canvas.style.position = 'absolute';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    let transform = `scale(0.5) translate(${-(screenWidth / 2)}px, ${-(screenHeight / 2)}px)`;
+    canvas.addEventListener("mouseup", async (event) => {
+        draggingFrom = null;
+    });
+    window.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const delta = 1 - (-e.deltaY * 0.002);
+        
+        const pointerX = e.offsetX;
+        const pointerY = e.offsetY;
+        const zoomOld = worldViewScaleFactor;
+        const zoomNew = delta * worldViewScaleFactor;
+        
+        const newOriginX = worldViewOriginX
+            - (screenWidth * zoomOld) / 2 + pointerX * zoomOld
+            + (screenWidth * zoomNew) / 2 - pointerX * zoomNew;
+        
+        const newOriginY = worldViewOriginY
+            - (screenHeight * zoomOld) / 2 + pointerY * zoomOld
+            + (screenHeight * zoomNew) / 2 - pointerY * zoomNew;
+        
+        worldViewScaleFactor = zoomNew;
+        worldViewOriginX = newOriginX;
+        worldViewOriginY = newOriginY;
+        // console.log("newOriginX", newOriginX, "newOriginY", newOriginY);
+        
+        requestAnimationFrame(render);
+    }, { passive: false });
+    canvas.width = window.innerWidth * canvasScaleFactor;
+    canvas.height = window.innerHeight * canvasScaleFactor;
+    screenWidth = canvas.width;
+    screenHeight = canvas.height;
+    let xScaleFactor = 4 / screenWidth;
+    let yScaleFactor = 4 / screenHeight;
+    worldViewScaleFactor = Math.max(xScaleFactor, yScaleFactor);
+    console.log("screenWidth", screenWidth);
+    console.log("screenHeight", screenHeight);
+    console.log("xScaleFactor", xScaleFactor, "yScaleFactor", yScaleFactor);
+    console.log("worldViewScaleFactor", worldViewScaleFactor);
+    
+    let widthOffset = (screenWidth - (screenWidth * canvasScaleFactor)) / 2;
+    let heightOffset = (screenHeight - (screenHeight * canvasScaleFactor)) / 2;
+    let transform = `scale(${1 / canvasScaleFactor}) translate(${widthOffset}px, ${heightOffset}px)`;
     canvas.style.transform = transform;
     document.body.style.overflow = "hidden";
-    
-    // console.log("transform", transform);
-    document.body.appendChild(overlay);
     document.body.appendChild(canvas);
     const context = canvas.getContext("2d");
     const imageData = context.createImageData(screenWidth, screenHeight);
 
-    drawMandelbrot(context, imageData);
+    requestAnimationFrame(render);
+    
+    const debouncedRender = throttle(200, render);
+    function render() {
+        drawMandelbrot(context, imageData)
+    }
 
 }
 
